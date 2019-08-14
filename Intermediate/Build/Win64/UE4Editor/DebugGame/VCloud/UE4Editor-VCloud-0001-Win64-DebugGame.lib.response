@@ -1,0 +1,14 @@
+/NOLOGO
+/errorReport:prompt
+/MACHINE:x64
+/SUBSYSTEM:WINDOWS
+/DEF
+/NAME:"UE4Editor-VCloud-0001-Win64-DebugGame.dll"
+/IGNORE:4221
+/NODEFAULTLIB
+"G:\Pro\UE4\Engine\Intermediate\Build\Win64\UE4Editor\Development\Engine\SharedPCH.Engine.NonOptimized.h.obj"
+"G:\Dev\Personal\UnMove\Plugins\VCloud\Intermediate\Build\Win64\UE4Editor\DebugGame\VCloud\Module.VCloud.cpp.obj"
+"G:\Dev\Personal\UnMove\Plugins\VCloud\Intermediate\Build\Win64\UE4Editor\DebugGame\VCloud\Module.VCloud.gen.cpp.obj"
+"G:\Pro\UE4\Engine\Intermediate\Build\Win64\UE4Editor\Development\Default.rc2.res"
+/OUT:"G:\Dev\Personal\UnMove\Plugins\VCloud\Intermediate\Build\Win64\UE4Editor\DebugGame\VCloud\UE4Editor-VCloud-0001-Win64-DebugGame.lib"
+/INCLUDE:IMPLEMENT_MODULE_VCloud

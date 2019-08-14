@@ -1,0 +1,13 @@
+{
+	"RemapUnityFiles": 
+	{
+		"Module.VCloud.cpp.obj": [
+			"VCloud.cpp.obj",
+			"VCloudShader.cpp.obj"
+		],
+		"Module.VCloud.gen.cpp.obj": [
+			"VCloud.init.gen.cpp.obj",
+			"VCloudShader.gen.cpp.obj"
+		]
+	}
+}
