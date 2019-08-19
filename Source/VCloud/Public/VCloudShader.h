@@ -9,6 +9,7 @@
 #include "RHI/Public/RHICommandList.h"
 #include "RHI.h"
 #include "GlobalShader.h"
+#include "ShaderParameterUtils.h"
 #include "Engine/TextureRenderTarget.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "VCloudShader.generated.h"
@@ -33,6 +34,8 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "VCloud")
 	static void GenerateCloudNoise(const AActor* HandleActor,const FCloudNoiseConfig& Config);
+	UFUNCTION(BlueprintCallable, Category = "VCloud")
+	static void RenderNoiseMap();
 	static class FVCloudNoiseGenerator* s_Generator;
 };
 class FVCloudNoiseGenerator
@@ -43,8 +46,47 @@ public:
 private:
 	void Generate_RenderThread();
 private:
+	FCloudNoiseConfig m_Config;
 	ERHIFeatureLevel::Type m_FeatureLevel;
 	FUnorderedAccessViewRHIRef uavs[3];
 	FShaderResourceViewRHIRef srvs[3];
 	FTextureRHIRef tex[3];
 };
+
+
+
+
+#define REGISTER_ONE_RWTEXTURE_SHADER(ShaderClassName,KernelName,RWTextureName,Path) \
+class ShaderClassName :public FGlobalShader \
+{ \
+	DECLARE_SHADER_TYPE(ShaderClassName, Global); \
+public: \
+	ShaderClassName(){} \
+	ShaderClassName(const ShaderMetaType::CompiledShaderInitializerType initializer) : FGlobalShader(initializer) \
+	{\
+		RWTextureName.Bind(initializer.ParameterMap, TEXT(#RWTextureName));\
+	}\
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment) \
+	{\
+		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment); \
+	}\
+	virtual bool Serialize(FArchive& Ar) override \
+	{\
+		bool ShaderHasOutputParameters = FGlobalShader::Serialize(Ar);\
+		Ar << RWTextureName;\
+		return ShaderHasOutputParameters;\
+	}\
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)\
+	{\
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);\
+	}\
+	void SetParameter(FRHICommandList& RHICmdList, FUnorderedAccessViewRHIRef uav)\
+	{\
+		FComputeShaderRHIRef ShaderRHI = GetComputeShader();\
+		SetUAVParameter(RHICmdList, ShaderRHI, RWTextureName, uav);\
+	}\
+private: \
+	FShaderResourceParameter RWTextureName;\
+};\
+IMPLEMENT_SHADER_TYPE( ,ShaderClassName,TEXT(#Path),TEXT(#KernelName),SF_Compute)
+

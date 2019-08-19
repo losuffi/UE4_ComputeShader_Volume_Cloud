@@ -1,0 +1,24 @@
+#include "/Engine/Private/Common.ush"
+
+inline float2 Hash2(float2 Input)
+{
+    Input = float2(dot(Input, float2(123.1, 57.1)), dot(Input, float2(78, -21.7));
+    return -1.0 + 2.0 * frac(sin(Input) * 1e5);
+}
+
+inline float Perlin4(float4 Input)
+{
+
+}
+
+inline float SeamlessPerlin2(float2 Input)
+{
+
+}
+
+RWTexture2D<float4> RWCoverNoise;
+[numthreads(32, 32, 1)]
+void GenerateCoverNoise(uint3 id : SV_DispatchThreadID)
+{
+    RWCoverNoise[id.xy] = 1;
+}

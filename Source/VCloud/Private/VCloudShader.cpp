@@ -2,6 +2,9 @@
 #include "VCloudShader.h"
 FVCloudNoiseGenerator* UVCloudLibrary::s_Generator;
 
+REGISTER_ONE_RWTEXTURE_SHADER(FCoverNoiseShaderCS,GenerateCoverNoise,CoverMap,/Plugin/VCloud/Private/CloudMarching.usf)
+REGISTER_ONE_RWTEXTURE_SHADER(FDetailNoiseShaderCS,GenerateDetailNoise,DetailMap,/Plugin/VCloud/Private/CloudMarching.usf)
+REGISTER_ONE_RWTEXTURE_SHADER(FVolumeNoiseShaderCS,GenerateVolumeNoise,VolumeMap,/Plugin/VCloud/Private/CloudMarching.usf)
 UVCloudLibrary::UVCloudLibrary(const FObjectInitializer& obj) :Super(obj)
 {
 
@@ -16,6 +19,14 @@ void UVCloudLibrary::GenerateCloudNoise(const AActor* HandleActor,const FCloudNo
 	s_Generator->Update(HandleActor->GetWorld()->Scene->GetFeatureLevel(), Config);
 }
 
+
+void UVCloudLibrary::RenderNoiseMap()
+{
+	if (s_Generator)
+	{
+		s_Generator->Generate();
+	}
+}	
 
 void FVCloudNoiseGenerator::Update(ERHIFeatureLevel::Type FeatureLevel, const FCloudNoiseConfig& Config)
 {
@@ -32,6 +43,7 @@ void FVCloudNoiseGenerator::Update(ERHIFeatureLevel::Type FeatureLevel, const FC
 	srvs[0] = RHICreateShaderResourceView(tex[0]->GetTexture2D(), 0);
 	srvs[1] = RHICreateShaderResourceView(tex[1]->GetTexture2D(), 0);
 	srvs[2] = RHICreateShaderResourceView(tex[2]->GetTexture3D(), 0);
+	m_Config = Config;
 }
 
 void FVCloudNoiseGenerator::Generate()
@@ -60,4 +72,18 @@ void FVCloudNoiseGenerator::Generate_RenderThread()
 	//5. 发起Drawcall，并设置发往GPU中的指令流结构（一条指令流由一个SM执行，不同指令流之间调度执行顺序也是未知的
 	//  ，同一个SM，共享内存，也存在最大wrap数目的限制，Unity中是32个wrap，即32*32）,用计算着色器的概念来描述，一个SM完成一个SV_GroupID中，所有SV_GroupThreadID的线程
 	//6. 官方还有一个清理着色器参数的步骤。
+	TShaderMapRef<FCoverNoiseShaderCS> CoverCs(GetGlobalShaderMap(m_FeatureLevel));
+	RHICmdList.SetComputeShader(CoverCs->GetComputeShader());
+	CoverCs->SetParameter(RHICmdList, uavs[0]);
+	DispatchComputeShader(RHICmdList, *CoverCs, m_Config.CoverSize.X / 32, m_Config.CoverSize.Y / 32, 1);
+
+	TShaderMapRef<FDetailNoiseShaderCS> DetailCs(GetGlobalShaderMap(m_FeatureLevel));
+	RHICmdList.SetComputeShader(DetailCs->GetComputeShader());
+	DetailCs->SetParameter(RHICmdList, uavs[1]);
+	DispatchComputeShader(RHICmdList, *DetailCs, m_Config.DetailSize.X / 32, m_Config.DetailSize.Y / 32, 1);
+
+	TShaderMapRef<FVolumeNoiseShaderCS> VolumeCs(GetGlobalShaderMap(m_FeatureLevel));
+	RHICmdList.SetComputeShader(VolumeCs->GetComputeShader());
+	VolumeCs->SetParameter(RHICmdList, uavs[2]);
+	DispatchComputeShader(RHICmdList, *VolumeCs, m_Config.VolumeSize.X / 32, m_Config.VolumeSize.Y / 32, m_Config.VolumeSize.Z);
 }
