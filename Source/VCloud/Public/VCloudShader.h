@@ -50,7 +50,8 @@ private:
 	ERHIFeatureLevel::Type m_FeatureLevel;
 	FUnorderedAccessViewRHIRef uavs[3];
 	FShaderResourceViewRHIRef srvs[3];
-	FTextureRHIRef tex[3];
+	FTexture2DRHIRef tex[2];
+	FTexture3DRHIRef volumeTex;
 };
 
 
@@ -65,6 +66,7 @@ public: \
 	ShaderClassName(const ShaderMetaType::CompiledShaderInitializerType initializer) : FGlobalShader(initializer) \
 	{\
 		RWTextureName.Bind(initializer.ParameterMap, TEXT(#RWTextureName));\
+		SizeParameter.Bind(initializer.ParameterMap, TEXT("RWSize"));\
 	}\
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment) \
 	{\
@@ -80,13 +82,15 @@ public: \
 	{\
 		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);\
 	}\
-	void SetParameter(FRHICommandList& RHICmdList, FUnorderedAccessViewRHIRef uav)\
+	void SetParameter(FRHICommandList& RHICmdList, FUnorderedAccessViewRHIRef uav, FVector4 size)\
 	{\
 		FComputeShaderRHIRef ShaderRHI = GetComputeShader();\
 		SetUAVParameter(RHICmdList, ShaderRHI, RWTextureName, uav);\
+		SetShaderValue(RHICmdList, ShaderRHI, SizeParameter, size);\
 	}\
 private: \
 	FShaderResourceParameter RWTextureName;\
+	FShaderParameter SizeParameter;\
 };\
 IMPLEMENT_SHADER_TYPE( ,ShaderClassName,TEXT(#Path),TEXT(#KernelName),SF_Compute)
 

@@ -1,24 +1,156 @@
 #include "/Engine/Private/Common.ush"
-
+#define PI 3.1415
+#define Grad4(P, I, VA, VB, S) lerp(dot(Hash4(P + VA), I - VA), dot(Hash4(P + VB), I - VB) ,S);
+#define Grad2(P, I, VA, VB, S) lerp(dot(Hash2(P + VA), I - VA), dot(Hash2(P + VB), I - VB), S);
+#define Grad3(P, I, VA, VB, S) lerp(dot(Hash3(P + VA), I - VA), dot(Hash3(P + VB), I - VB), S);
 inline float2 Hash2(float2 Input)
 {
-    Input = float2(dot(Input, float2(123.1, 57.1)), dot(Input, float2(78, -21.7));
+    Input = float2(dot(Input, float2(123.1, 57.1)), dot(Input, float2(78, -21.7)));
     return -1.0 + 2.0 * frac(sin(Input) * 1e5);
+}
+
+inline float3 Hash3(float3 Input)
+{
+    Input = float3(
+            dot(Input, float3(21.5, 126.1, 49.8)),
+            dot(Input, float3(-121.5, 403.5, 49.6)),
+            dot(Input, float3(59.0, 54.0, -69.1))
+            );
+    return -1.0 * 2.0 * frac(sin(Input) * 1e5);
+}
+
+inline float4 Hash4(float4 Input)
+{
+    Input = float4(
+            dot(Input, float4(21.5, 126.1, 49.8, -43.2)),
+            dot(Input, float4(-121.5, 403.5, 49.6, 12.1)),
+            dot(Input, float4(59.0, 54.0, -69.1, 9.7)),
+            dot(Input, float4(70.6, -16.0, -19.5, 93.4))
+            );
+    return -1.0 * 2.0 * frac(sin(Input) * 1e5);
+}
+
+inline float Perlin2(float2 Input)
+{
+    float2 fp = floor(Input);
+    float2 fi = frac(Input);
+    float2 w = fi * fi * (3.0 - 2.0 * fi);
+    float horiV = Grad2(fp, fi, float2(0, 0), float2(1, 0), w.x)
+
+    float horiU = Grad2(fp, fi, float2(0, 1), float2(1, 1), w.x)
+    float res = lerp(horiV, horiU, w.y);
+    return res;
+}
+
+inline float Perlin3(float3 Input)
+{
+    float3 fp = floor(Input);
+    float3 fi = frac(Input);
+    float3 w = fi * fi * (3.0 - 2.0 * fi);
+    float a = Grad3(fp, fi, float3(0, 0, 0), float3(1, 0, 0), w.x)
+    float b = Grad3(fp, fi, float3(0, 1, 0), float3(1, 1, 0), w.x)
+    float c = Grad3(fp, fi, float3(0, 0, 1), float3(1, 0, 1), w.x)
+    float d = Grad3(fp, fi, float3(0, 1, 1), float3(1, 1, 1), w.x)
+    float e = lerp(a, b, w.y);
+    float f = lerp(c, d, w.y);
+    float h = lerp(e, f, w.z);
+    return h;
 }
 
 inline float Perlin4(float4 Input)
 {
+    float4 fp = floor(Input);
+    float4 fi = frac(Input);
+    float4 w = fi * fi * (3.0 - 2.0 * fi);
+    
+    float a = Grad4(fp, fi, 0, float4(1, 0, 0, 0), w.x)
+    float b = Grad4(fp, fi, float4(0, 1, 0, 0), float4(1, 1, 0, 0), w.x)
+    float c = lerp(a, b, w.y);
 
+    float d = Grad4(fp, fi, float4(0, 0, 1, 0), float4(1, 0, 1, 0), w.x)
+    float e = Grad4(fp, fi, float4(0, 1, 1, 0), float4(1, 1, 1, 0), w.x)
+    float f = lerp(d, e, w.y);
+    
+    float g = Grad4(fp, fi, float4(0, 0, 0, 1), float4(1, 0, 0, 1), w.x)
+    float h = Grad4(fp, fi, float4(0, 1, 0, 1), float4(1, 1, 0, 1), w.x)
+    float i = lerp(g, h, w.y);
+
+    float j = Grad4(fp, fi, float4(0, 0, 1, 1), float4(1, 0, 1, 1), w.x)
+    float k = Grad4(fp, fi, float4(0, 1, 1, 1), float4(1, 1, 1, 1), w.x)
+    float l = lerp(j, k, w.y);
+
+    float m = lerp(c, f, w.z);
+    float n = lerp(i, l, w.z);
+
+    float o = lerp(m, n, w.w);
+
+    return o;
 }
 
-inline float SeamlessPerlin2(float2 Input)
+inline float SeamlessPerlin4(float4 Input)
 {
-
+    return Perlin4(Input);
 }
 
-RWTexture2D<float4> RWCoverNoise;
+inline float OctavePerlin2(float2 Input, float Base)
+{
+    float n = 0;
+    float l = 1;
+    for (int i = 0; i < 4; i++)
+    {
+        n += Perlin2(Base * Input) * l;
+        Base *= 2;
+        l *= 0.5;
+    }
+    return n;
+}
+
+inline float3 OctavePerlin3(float3 Input, float Base)
+{
+    float n = 0;
+    float l = 1;
+    for (int i = 0; i < 5; i++)
+    {
+        n += Perlin3(Base * Input) * l;
+        Base *= 2;
+        l *= 0.5;
+    }
+    return n;
+}
+
+inline float SeamlessPerlin2(float2 Input, float2 De)
+{
+    float nx = cos(Input.x * 2 * PI) * De.x / (2 * PI);
+    float ny = cos(Input.y * 2 * PI) * De.y / (2 * PI);
+    float nz = sin(Input.x * 2 * PI) * De.x / (2 * PI);
+    float nw = sin(Input.y * 2 * PI) * De.y / (2 * PI);
+    return SeamlessPerlin4(float4(nx, nz, ny, nw));
+}
+inline float SeamlessPerlin(float2 Input)
+{
+    float nx = cos(Input.x * 2 * PI) * sin(Input.y * 2 * PI);
+    float ny = sin(Input.x * 2 * PI) * sin(Input.y * 2 * PI);
+    float nz = cos(Input.y * 2 * PI);
+    return OctavePerlin3(float3(nx, ny, nz), 4);
+
+}
+float4 RWSize;
+RWTexture2D<float4> CoverMap;
 [numthreads(32, 32, 1)]
 void GenerateCoverNoise(uint3 id : SV_DispatchThreadID)
 {
-    RWCoverNoise[id.xy] = 1;
+    CoverMap[id.xy] = OctavePerlin2(id.xy * 2.0 / RWSize.xy, 4);
 }
+RWTexture2D<float4> DetailMap;
+[numthreads(32, 32, 1)]
+void GenerateDetailNoise(uint3 id : SV_DispatchThreadID)
+{
+    DetailMap[id.xy] = SeamlessPerlin2(id.xy / RWSize.xy, float2(10, 10));
+}
+RWTexture3D<float4> VolumeMap;
+[numthreads(32, 32, 1)]
+void GenerateVolumeNoise(uint3 id : SV_DispatchThreadID)
+{
+    VolumeMap[id] = 0;
+}
+

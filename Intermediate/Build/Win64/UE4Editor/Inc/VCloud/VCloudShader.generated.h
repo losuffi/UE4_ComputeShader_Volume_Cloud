@@ -24,6 +24,14 @@ template<> VCLOUD_API UScriptStruct* StaticStruct<struct FCloudNoiseConfig>();
 
 #define UnMove_Plugins_VCloud_Source_VCloud_Public_VCloudShader_h_32_RPC_WRAPPERS \
  \
+	DECLARE_FUNCTION(execRenderNoiseMap) \
+	{ \
+		P_FINISH; \
+		P_NATIVE_BEGIN; \
+		UVCloudLibrary::RenderNoiseMap(); \
+		P_NATIVE_END; \
+	} \
+ \
 	DECLARE_FUNCTION(execGenerateCloudNoise) \
 	{ \
 		P_GET_OBJECT(AActor,Z_Param_HandleActor); \
@@ -36,6 +44,14 @@ template<> VCLOUD_API UScriptStruct* StaticStruct<struct FCloudNoiseConfig>();
 
 
 #define UnMove_Plugins_VCloud_Source_VCloud_Public_VCloudShader_h_32_RPC_WRAPPERS_NO_PURE_DECLS \
+ \
+	DECLARE_FUNCTION(execRenderNoiseMap) \
+	{ \
+		P_FINISH; \
+		P_NATIVE_BEGIN; \
+		UVCloudLibrary::RenderNoiseMap(); \
+		P_NATIVE_END; \
+	} \
  \
 	DECLARE_FUNCTION(execGenerateCloudNoise) \
 	{ \

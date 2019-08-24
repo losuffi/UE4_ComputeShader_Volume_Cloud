@@ -22,6 +22,7 @@ void EmptyLinkFunctionForGeneratedCodeVCloudShader() {}
 	ENGINE_API UClass* Z_Construct_UClass_UBlueprintFunctionLibrary();
 	VCLOUD_API UFunction* Z_Construct_UFunction_UVCloudLibrary_GenerateCloudNoise();
 	ENGINE_API UClass* Z_Construct_UClass_AActor_NoRegister();
+	VCLOUD_API UFunction* Z_Construct_UFunction_UVCloudLibrary_RenderNoiseMap();
 // End Cross Module References
 class UScriptStruct* FCloudNoiseConfig::StaticStruct()
 {
@@ -136,6 +137,7 @@ static struct FScriptStruct_VCloud_StaticRegisterNativesFCloudNoiseConfig
 		UClass* Class = UVCloudLibrary::StaticClass();
 		static const FNameNativePtrPair Funcs[] = {
 			{ "GenerateCloudNoise", &UVCloudLibrary::execGenerateCloudNoise },
+			{ "RenderNoiseMap", &UVCloudLibrary::execRenderNoiseMap },
 		};
 		FNativeFunctionRegistrar::RegisterFunctions(Class, Funcs, ARRAY_COUNT(Funcs));
 	}
@@ -192,6 +194,29 @@ static struct FScriptStruct_VCloud_StaticRegisterNativesFCloudNoiseConfig
 		}
 		return ReturnFunction;
 	}
+	struct Z_Construct_UFunction_UVCloudLibrary_RenderNoiseMap_Statics
+	{
+#if WITH_METADATA
+		static const UE4CodeGen_Private::FMetaDataPairParam Function_MetaDataParams[];
+#endif
+		static const UE4CodeGen_Private::FFunctionParams FuncParams;
+	};
+#if WITH_METADATA
+	const UE4CodeGen_Private::FMetaDataPairParam Z_Construct_UFunction_UVCloudLibrary_RenderNoiseMap_Statics::Function_MetaDataParams[] = {
+		{ "Category", "VCloud" },
+		{ "ModuleRelativePath", "Public/VCloudShader.h" },
+	};
+#endif
+	const UE4CodeGen_Private::FFunctionParams Z_Construct_UFunction_UVCloudLibrary_RenderNoiseMap_Statics::FuncParams = { (UObject*(*)())Z_Construct_UClass_UVCloudLibrary, nullptr, "RenderNoiseMap", 0, nullptr, 0, RF_Public|RF_Transient|RF_MarkAsNative, (EFunctionFlags)0x04022401, 0, 0, METADATA_PARAMS(Z_Construct_UFunction_UVCloudLibrary_RenderNoiseMap_Statics::Function_MetaDataParams, ARRAY_COUNT(Z_Construct_UFunction_UVCloudLibrary_RenderNoiseMap_Statics::Function_MetaDataParams)) };
+	UFunction* Z_Construct_UFunction_UVCloudLibrary_RenderNoiseMap()
+	{
+		static UFunction* ReturnFunction = nullptr;
+		if (!ReturnFunction)
+		{
+			UE4CodeGen_Private::ConstructUFunction(ReturnFunction, Z_Construct_UFunction_UVCloudLibrary_RenderNoiseMap_Statics::FuncParams);
+		}
+		return ReturnFunction;
+	}
 	UClass* Z_Construct_UClass_UVCloudLibrary_NoRegister()
 	{
 		return UVCloudLibrary::StaticClass();
@@ -212,6 +237,7 @@ static struct FScriptStruct_VCloud_StaticRegisterNativesFCloudNoiseConfig
 	};
 	const FClassFunctionLinkInfo Z_Construct_UClass_UVCloudLibrary_Statics::FuncInfo[] = {
 		{ &Z_Construct_UFunction_UVCloudLibrary_GenerateCloudNoise, "GenerateCloudNoise" }, // 732800081
+		{ &Z_Construct_UFunction_UVCloudLibrary_RenderNoiseMap, "RenderNoiseMap" }, // 1903145749
 	};
 #if WITH_METADATA
 	const UE4CodeGen_Private::FMetaDataPairParam Z_Construct_UClass_UVCloudLibrary_Statics::Class_MetaDataParams[] = {
@@ -246,7 +272,7 @@ static struct FScriptStruct_VCloud_StaticRegisterNativesFCloudNoiseConfig
 		}
 		return OuterClass;
 	}
-	IMPLEMENT_CLASS(UVCloudLibrary, 4135175919);
+	IMPLEMENT_CLASS(UVCloudLibrary, 3397315297);
 	template<> VCLOUD_API UClass* StaticClass<UVCloudLibrary>()
 	{
 		return UVCloudLibrary::StaticClass();

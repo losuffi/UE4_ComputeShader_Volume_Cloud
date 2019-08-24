@@ -32,17 +32,17 @@ void FVCloudNoiseGenerator::Update(ERHIFeatureLevel::Type FeatureLevel, const FC
 {
 	m_FeatureLevel = FeatureLevel;
 	FRHIResourceCreateInfo info;
-	tex[0] = RHICreateTexture2D(FMath::FloorToInt(Config.CoverSize.X), FMath::FloorToInt(Config.CoverSize.Y), PF_R8G8B8A8, 1, 2, TexCreate_UAV | TexCreate_ShaderResource, info);
-	tex[1] = RHICreateTexture2D(FMath::FloorToInt(Config.DetailSize.X), FMath::FloorToInt(Config.DetailSize.Y), PF_R8G8B8A8, 1, 2, TexCreate_UAV | TexCreate_ShaderResource, info);
-	tex[2] = RHICreateTexture3D(FMath::FloorToInt(Config.VolumeSize.X), FMath::FloorToInt(Config.VolumeSize.Y), FMath::FloorToInt(Config.VolumeSize.Z), PF_R8G8B8A8, 1, TexCreate_UAV | TexCreate_ShaderResource, info);
+	tex[0] = RHICreateTexture2D(FMath::FloorToInt(Config.CoverSize.X), FMath::FloorToInt(Config.CoverSize.Y), PF_R8G8B8A8, 1, 1, TexCreate_UAV | TexCreate_ShaderResource, info);
+	tex[1] = RHICreateTexture2D(FMath::FloorToInt(Config.DetailSize.X), FMath::FloorToInt(Config.DetailSize.Y), PF_R8G8B8A8, 1, 1, TexCreate_UAV | TexCreate_ShaderResource, info);
+	volumeTex = RHICreateTexture3D(FMath::FloorToInt(Config.VolumeSize.X), FMath::FloorToInt(Config.VolumeSize.Y), FMath::FloorToInt(Config.VolumeSize.Z), PF_R8G8B8A8, 1, TexCreate_UAV | TexCreate_ShaderResource, info);
 
 	uavs[0] = RHICreateUnorderedAccessView(tex[0]);
 	uavs[1] = RHICreateUnorderedAccessView(tex[1]);
-	uavs[2] = RHICreateUnorderedAccessView(tex[3]);
+	uavs[2] = RHICreateUnorderedAccessView(volumeTex);
 
 	srvs[0] = RHICreateShaderResourceView(tex[0]->GetTexture2D(), 0);
 	srvs[1] = RHICreateShaderResourceView(tex[1]->GetTexture2D(), 0);
-	srvs[2] = RHICreateShaderResourceView(tex[2]->GetTexture3D(), 0);
+	srvs[2] = RHICreateShaderResourceView(volumeTex->GetTexture3D(), 0);
 	m_Config = Config;
 }
 
@@ -74,16 +74,16 @@ void FVCloudNoiseGenerator::Generate_RenderThread()
 	//6. 官方还有一个清理着色器参数的步骤。
 	TShaderMapRef<FCoverNoiseShaderCS> CoverCs(GetGlobalShaderMap(m_FeatureLevel));
 	RHICmdList.SetComputeShader(CoverCs->GetComputeShader());
-	CoverCs->SetParameter(RHICmdList, uavs[0]);
+	CoverCs->SetParameter(RHICmdList, uavs[0], FVector4(512,512,0,0));
 	DispatchComputeShader(RHICmdList, *CoverCs, m_Config.CoverSize.X / 32, m_Config.CoverSize.Y / 32, 1);
 
 	TShaderMapRef<FDetailNoiseShaderCS> DetailCs(GetGlobalShaderMap(m_FeatureLevel));
 	RHICmdList.SetComputeShader(DetailCs->GetComputeShader());
-	DetailCs->SetParameter(RHICmdList, uavs[1]);
+	DetailCs->SetParameter(RHICmdList, uavs[1],FVector4(128,128,0,0));
 	DispatchComputeShader(RHICmdList, *DetailCs, m_Config.DetailSize.X / 32, m_Config.DetailSize.Y / 32, 1);
 
 	TShaderMapRef<FVolumeNoiseShaderCS> VolumeCs(GetGlobalShaderMap(m_FeatureLevel));
 	RHICmdList.SetComputeShader(VolumeCs->GetComputeShader());
-	VolumeCs->SetParameter(RHICmdList, uavs[2]);
+	VolumeCs->SetParameter(RHICmdList, uavs[2],FVector4(128,128,128,0));
 	DispatchComputeShader(RHICmdList, *VolumeCs, m_Config.VolumeSize.X / 32, m_Config.VolumeSize.Y / 32, m_Config.VolumeSize.Z);
 }
