@@ -3,10 +3,11 @@
 #define Grad4(P, I, VA, VB, S) lerp(dot(Hash4(P + VA), I - VA), dot(Hash4(P + VB), I - VB) ,S);
 #define Grad2(P, I, VA, VB, S) lerp(dot(Hash2(P + VA), I - VA), dot(Hash2(P + VB), I - VB), S);
 #define Grad3(P, I, VA, VB, S) lerp(dot(Hash3(P + VA), I - VA), dot(Hash3(P + VB), I - VB), S);
+
 inline float2 Hash2(float2 Input)
 {
     Input = float2(dot(Input, float2(123.1, 57.1)), dot(Input, float2(78, -21.7)));
-    return -1.0 + 2.0 * frac(sin(Input) * 1e5);
+    return -1.0 + 2.0 * frac(sin(Input) * 43758.5453123);
 }
 
 inline float3 Hash3(float3 Input)
@@ -28,6 +29,28 @@ inline float4 Hash4(float4 Input)
             dot(Input, float4(70.6, -16.0, -19.5, 93.4))
             );
     return -1.0 * 2.0 * frac(sin(Input) * 1e5);
+}
+
+inline float SimplexNoise2(float2 Input)
+{
+    const float Skew = 0.211324865; // (3 - sqrt(3)) / 6 
+    const float UnSkew = 0.366025404; //(sqrt(3) - 1) / 2
+    
+    float2 SqureInputI = floor(Input + (Input.x + Input.y) * UnSkew);
+    float2 TriOffset = Input - SqureInputI + (SqureInputI.x + SqureInputI.y) * Skew;
+    float Dir = step(TriOffset.y, TriOffset.x);
+    float2 OtherCoorDir = float2(Dir, 1.0 - Dir);
+
+    float2 TriOffsetB = TriOffset - 1.0 + 2.0 * Skew;
+    float2 TriOffsetC = TriOffset - OtherCoorDir + Skew;
+    
+    float3 GradientList = float3(
+        dot(TriOffset, Hash2(SqureInputI)),
+        dot(TriOffsetB, Hash2(SqureInputI + 1.0)),
+        dot(TriOffsetC, Hash2(SqureInputI + OtherCoorDir)));
+    float3 Attention = max(0.5 - float3(dot(TriOffset, TriOffset), dot(TriOffsetB, TriOffsetB), dot(TriOffsetC, TriOffsetC)), 0);
+    float3 n = Attention * Attention * Attention *Attention * GradientList;
+    return dot(n, 70.0);
 }
 
 inline float Perlin2(float2 Input)
@@ -120,10 +143,10 @@ inline float3 OctavePerlin3(float3 Input, float Base)
 
 inline float SeamlessPerlin2(float2 Input, float2 De)
 {
-    float nx = cos(Input.x * 2 * PI) * De.x / (2 * PI);
-    float ny = cos(Input.y * 2 * PI) * De.y / (2 * PI);
-    float nz = sin(Input.x * 2 * PI) * De.x / (2 * PI);
-    float nw = sin(Input.y * 2 * PI) * De.y / (2 * PI);
+    float nx =0.71+ cos(Input.x * 2 * PI) * De.x / (2 * PI);
+    float ny =0.71+ cos(Input.y * 2 * PI) * De.y / (2 * PI);
+    float nz =0.71+ sin(Input.x * 2 * PI) * De.x / (2 * PI);
+    float nw =0.71+ sin(Input.y * 2 * PI) * De.y / (2 * PI);
     return SeamlessPerlin4(float4(nx, nz, ny, nw));
 }
 inline float SeamlessPerlin(float2 Input)
@@ -139,7 +162,7 @@ RWTexture2D<float4> CoverMap;
 [numthreads(32, 32, 1)]
 void GenerateCoverNoise(uint3 id : SV_DispatchThreadID)
 {
-    CoverMap[id.xy] = OctavePerlin2(id.xy * 2.0 / RWSize.xy, 4);
+    CoverMap[id.xy] = SimplexNoise2(id.xy * 16.0 / RWSize.xy);
 }
 RWTexture2D<float4> DetailMap;
 [numthreads(32, 32, 1)]
