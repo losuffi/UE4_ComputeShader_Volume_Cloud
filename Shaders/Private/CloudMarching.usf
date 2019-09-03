@@ -17,7 +17,7 @@ inline float3 Hash3(float3 Input)
             dot(Input, float3(-121.5, 403.5, 49.6)),
             dot(Input, float3(59.0, 54.0, -69.1))
             );
-    return -1.0 * 2.0 * frac(sin(Input) * 1e5);
+    return -1.0 + 2.0 * frac(sin(Input) * 1e5);
 }
 
 inline float4 Hash4(float4 Input)
@@ -28,7 +28,7 @@ inline float4 Hash4(float4 Input)
             dot(Input, float4(59.0, 54.0, -69.1, 9.7)),
             dot(Input, float4(70.6, -16.0, -19.5, 93.4))
             );
-    return -1.0 * 2.0 * frac(sin(Input) * 1e5);
+    return -1.0 + 2.0 * frac(sin(Input) * 1e5);
 }
 
 inline float SimplexNoise2(float2 Input)
@@ -51,6 +51,67 @@ inline float SimplexNoise2(float2 Input)
     float3 Attention = max(0.5 - float3(dot(TriOffset, TriOffset), dot(TriOffsetB, TriOffsetB), dot(TriOffsetC, TriOffsetC)), 0);
     float3 n = Attention * Attention * Attention *Attention * GradientList;
     return dot(n, 70.0);
+}
+
+inline float4 MaxBit4(float4 Input)
+{
+    float4 a = step(0, Input - Input.yzwx);
+    float4 b = step(0, Input - Input.zwxy);
+    return a*b*(1 - a.wxyz);
+}
+
+inline float SimplexNoise4(float4 Input)
+{
+    const float Skew = 0.1382; //(5 - sqrt(5) / 20
+    const float UnSkew = 0.3090; //(sqrt(5) - 1) / 4
+
+    float4 SqureInputI = floor(Input + (Input.x + Input.y + Input.z + Input.w) * UnSkew);
+    
+    float4 TriOffset = Input - SqureInputI + (SqureInputI.x + SqureInputI.y + SqureInputI.z + SqureInputI.w) * Skew;
+   
+    float4 bit_1 = MaxBit4(TriOffset);  
+    float4 TriOffset1 = TriOffset - bit_1 + Skew;
+
+    float4 Inputtemp = TriOffset - bit_1 * 1e6;
+    float4 bit_2 = MaxBit4(Inputtemp);
+    float4 TriOffset2 = TriOffset1 - bit_2 + Skew;
+
+    Inputtemp = Inputtemp - bit_2 * 1e6;
+    float4 bit_3 = MaxBit4(Inputtemp);
+    float4 TriOffset3 = TriOffset2 - bit_3 + Skew;
+    
+    float4 TriOffset4 = TriOffset - 1 + 4 * Skew;
+    float2x3 gradientValue = float2x3(
+        dot(TriOffset,  Hash4(SqureInputI)),
+        dot(TriOffset1, Hash4(SqureInputI + bit_1)),
+        dot(TriOffset2, Hash4(SqureInputI + bit_1 + bit_2)),
+        dot(TriOffset3, Hash4(SqureInputI + bit_1 + bit_2 + bit_3)),
+        dot(TriOffset4, Hash4(SqureInputI + float4(1, 1, 1, 1))),
+        0
+    );
+
+    float2x3 Attention = max(0,
+        0.5 - float2x3(
+            dot(TriOffset,TriOffset),
+            dot(TriOffset1, TriOffset1),
+            dot(TriOffset2, TriOffset2),
+            dot(TriOffset3, TriOffset3),
+            dot(TriOffset4, TriOffset4),
+            0
+        )
+    );
+    float2x3 n = Attention * Attention * Attention * gradientValue;
+    //return dot(TriOffset1, Hash4(SqureInputI + bit_1));
+    return mul(float1x2(1, 1),mul(n, float3x1(70, 70, 70)))._11;
+}
+
+inline float OctaveSimplexNoise4(float4 Input)
+{
+    const float4x4 rot1 = float4x4(float4(0.92, 0.1, 0, -0.2), float4(0.1, 0.7, -0.1, 0.02), float4(0, -0.05, -0.72, -0.22), float4(-0.07,0.11,0.02,0.87));
+
+    float v = 0.5 * SimplexNoise4(Input);
+    v += 0.25 * SimplexNoise4(Input * 2.0);    v += 0.125 * SimplexNoise4(Input * 4.0);     v += 0.0625 * SimplexNoise4(Input * 8.0);
+    return v;
 }
 
 inline float Perlin2(float2 Input)
@@ -157,12 +218,23 @@ inline float SeamlessPerlin(float2 Input)
     return OctavePerlin3(float3(nx, ny, nz), 4);
 
 }
+
+inline float SeamlessSimplex2(float2 Input, float2 De)
+{
+    float nx =0.71+ cos(Input.x * 2 * PI) * De.x / (2 * PI);
+    float ny =0.71+ cos(Input.y * 2 * PI) * De.y / (2 * PI);
+    float nz =0.71+ sin(Input.x * 2 * PI) * De.x / (2 * PI);
+    float nw =0.71+ sin(Input.y * 2 * PI) * De.y / (2 * PI);
+    float value = OctaveSimplexNoise4(float4(nx, nz, ny, nw));
+    value = 0.5 + 0.5 * value;
+    return value;
+}
 float4 RWSize;
 RWTexture2D<float4> CoverMap;
 [numthreads(32, 32, 1)]
 void GenerateCoverNoise(uint3 id : SV_DispatchThreadID)
 {
-    CoverMap[id.xy] = SimplexNoise2(id.xy * 16.0 / RWSize.xy);
+    CoverMap[id.xy] = SeamlessSimplex2(id.xy * 1.0 / RWSize.xy, float2(8.0, 8.0));
 }
 RWTexture2D<float4> DetailMap;
 [numthreads(32, 32, 1)]
