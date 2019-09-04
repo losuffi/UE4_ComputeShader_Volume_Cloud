@@ -79,7 +79,7 @@ void FVCloudNoiseGenerator::Generate_RenderThread()
 
 	TShaderMapRef<FDetailNoiseShaderCS> DetailCs(GetGlobalShaderMap(m_FeatureLevel));
 	RHICmdList.SetComputeShader(DetailCs->GetComputeShader());
-	DetailCs->SetParameter(RHICmdList, uavs[1],FVector4(128,128,0,0));
+	DetailCs->SetParameter(RHICmdList, uavs[1],FVector4(512,512,0,0));
 	DispatchComputeShader(RHICmdList, *DetailCs, m_Config.DetailSize.X / 32, m_Config.DetailSize.Y / 32, 1);
 
 	TShaderMapRef<FVolumeNoiseShaderCS> VolumeCs(GetGlobalShaderMap(m_FeatureLevel));

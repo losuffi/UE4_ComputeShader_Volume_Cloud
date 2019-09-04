@@ -3,7 +3,7 @@
 #define Grad4(P, I, VA, VB, S) lerp(dot(Hash4(P + VA), I - VA), dot(Hash4(P + VB), I - VB) ,S);
 #define Grad2(P, I, VA, VB, S) lerp(dot(Hash2(P + VA), I - VA), dot(Hash2(P + VB), I - VB), S);
 #define Grad3(P, I, VA, VB, S) lerp(dot(Hash3(P + VA), I - VA), dot(Hash3(P + VB), I - VB), S);
-
+#define DOT6(X,Y) (dot(X._11_12_13, Y._11_12_13) + dot(X._21_22_23, Y._21_22_23))
 inline float2 Hash2(float2 Input)
 {
     Input = float2(dot(Input, float2(123.1, 57.1)), dot(Input, float2(78, -21.7)));
@@ -22,13 +22,34 @@ inline float3 Hash3(float3 Input)
 
 inline float4 Hash4(float4 Input)
 {
-    Input = float4(
+    /*Input = float4(
             dot(Input, float4(21.5, 126.1, 49.8, -43.2)),
             dot(Input, float4(-121.5, 403.5, 49.6, 12.1)),
             dot(Input, float4(59.0, 54.0, -69.1, 9.7)),
             dot(Input, float4(70.6, -16.0, -19.5, 93.4))
             );
-    return -1.0 + 2.0 * frac(sin(Input) * 1e5);
+    return -1.0 + 2.0 * frac(sin(Input) * 1e5);*/
+    float j = dot(Input, float4(21.5, 126.1, 49.8, -43.2));
+    j = sin(j) * 523.31;
+    float4 res = float4(frac(j * 125), frac(j * 61.5), frac(j * 30.75), frac(j * 11.2));
+    return -1.0 + 2.0 * res;
+}
+
+inline float2x3 Hash6(float2x3 Input)
+{
+    /*Input = float2x3(
+        DOT6(Input, float2x3(21.5, 126.1, 49.8 , -43.2, -15.1, 93.2)),
+        DOT6(Input, float2x3(-121.5, 403.5, 49.6, 12.1, 32.1, -42)),
+        DOT6(Input, float2x3(59.0, 54.0, -69.1, 9.7, 21, 34.6)),
+        DOT6(Input, float2x3(70.6, -16.0, -19.5, 93.4, 59.1, -52.3)),
+        DOT6(Input, float2x3(42.1, -0.15, -94, 32, 46.6, 59.2)),
+        DOT6(Input, float2x3(13.1, 24.9, -56.4, 101.9, 43.3, 17.8))
+        );
+    return -1.0 + 2.0 * frac(sin(Input) * 1e5);*/
+    float j = DOT6(Input, float2x3(21.5, 126.1, 49.8 , -43.2, -15.1, 93.2));
+    j = sin(j) * 4301.52;
+    float2x3 res = float2x3(frac(j * 125), frac(j * 61.5), frac(j * 30.75), frac(j * 11.2), frac(j * 0.8), frac(j * 0.2));
+    return -1.0 + 2.0 * res;
 }
 
 inline float SimplexNoise2(float2 Input)
@@ -91,7 +112,7 @@ inline float SimplexNoise4(float4 Input)
     );
 
     float2x3 Attention = max(0,
-        0.5 - float2x3(
+        0.7 - float2x3(
             dot(TriOffset,TriOffset),
             dot(TriOffset1, TriOffset1),
             dot(TriOffset2, TriOffset2),
@@ -101,8 +122,8 @@ inline float SimplexNoise4(float4 Input)
         )
     );
     float2x3 n = Attention * Attention * Attention * gradientValue;
-    //return dot(TriOffset1, Hash4(SqureInputI + bit_1));
-    return mul(float1x2(1, 1),mul(n, float3x1(70, 70, 70)))._11;
+    //return dot(TriOffset2, Hash4(SqureInputI + bit_1 + bit_2));
+    return DOT6(n, float2x3(70,70,70,70,70,70));
 }
 
 inline float OctaveSimplexNoise4(float4 Input)
@@ -110,10 +131,80 @@ inline float OctaveSimplexNoise4(float4 Input)
     const float4x4 rot1 = float4x4(float4(0.92, 0.1, 0, -0.2), float4(0.1, 0.7, -0.1, 0.02), float4(0, -0.05, -0.72, -0.22), float4(-0.07,0.11,0.02,0.87));
 
     float v = 0.5 * SimplexNoise4(Input);
-    v += 0.25 * SimplexNoise4(Input * 2.0);    v += 0.125 * SimplexNoise4(Input * 4.0);     v += 0.0625 * SimplexNoise4(Input * 8.0);
+    //v += 0.25 * SimplexNoise4(Input * 2.0);    v += 0.125 * SimplexNoise4(Input * 4.0);     v += 0.0625 * SimplexNoise4(Input * 8.0);
     return v;
 }
 
+inline float2x3 MaxBit6(float2x3 Input)
+{
+    float2x3 a = step(0, Input - float2x3(Input._12_13_21, Input._22_23_11));
+    float2x3 b = step(0, Input - float2x3(Input._13_21_22, Input._23_11_12));
+    float2x3 c = step(0, Input - float2x3(Input._21_22_23, Input._11_12_13));
+    return a * b * c * (1 - float2x3(a._23_11_12, a._13_21_22)) * (1 - float2x3(b._22_23_11, b._12_13_11));
+}
+
+inline float SimplexNoise6(float2x3 Input)
+{
+    const float Skew = 0.10367258783; // (7 - sqrt(7)) / 42
+    const float UnSkew = 0.27429188517; // (sqrt(7) - 1)/ 6
+
+    float2x3 squreInputI = floor(Input + DOT6(Input, float2x3(1,1,1,1,1,1))*UnSkew);
+    float2x3 TriOffset = Input - squreInputI + DOT6(squreInputI, float2x3(1,1,1,1,1,1)) * Skew;
+    
+    float2x3 bit1 = MaxBit6(TriOffset);
+    float2x3 TriOffset2 = TriOffset - bit1 + Skew;
+
+    float2x3 offsetTemp = TriOffset - bit1 * 1e6;
+    float2x3 bit2 = MaxBit6(offsetTemp);
+    float2x3 TriOffset3 = TriOffset2 - bit2 + Skew;
+
+    offsetTemp = offsetTemp - bit2 * 1e6;
+    float2x3 bit3 = MaxBit6(offsetTemp);
+    float2x3 TriOffset4 = TriOffset3 - bit3 + Skew;
+    
+    offsetTemp = offsetTemp - bit3 * 1e6;
+    float2x3 bit4 = MaxBit6(offsetTemp);
+    float2x3 TriOffset5 = TriOffset4 - bit4 + Skew;
+
+    offsetTemp = offsetTemp - bit4 * 1e6;
+    float2x3 bit5 = MaxBit6(offsetTemp);
+    float2x3 TriOffset6 = TriOffset5 - bit5 + Skew;
+
+    float2x3 TriOffset7 = TriOffset - float2x3(1,1,1,1,1,1) + 6 * Skew;
+
+    float2x4 gradientList = float2x4(
+        DOT6(TriOffset, Hash6(squreInputI)),
+        DOT6(TriOffset2, Hash6(squreInputI + bit1)),
+        DOT6(TriOffset3, Hash6(squreInputI + bit1 + bit2)),
+        DOT6(TriOffset4, Hash6(squreInputI + bit1 + bit2 + bit3)),
+        DOT6(TriOffset5, Hash6(squreInputI + bit1 + bit2 + bit3 + bit4)),
+        DOT6(TriOffset6, Hash6(squreInputI + bit1 + bit2 + bit3 + bit4 + bit5)),
+        DOT6(TriOffset7, Hash6(squreInputI + float2x3(1,1,1,1,1,1))),
+        0
+    );
+
+    float2x4 Attention = max(0, 3 - float2x4(
+        DOT6(TriOffset, TriOffset),
+        DOT6(TriOffset2, TriOffset2),
+        DOT6(TriOffset3, TriOffset3),
+        DOT6(TriOffset4, TriOffset4),
+        DOT6(TriOffset5, TriOffset5),
+        DOT6(TriOffset6, TriOffset6),
+        DOT6(TriOffset7, TriOffset7),
+        0
+    ));
+    float2x4 n = Attention * Attention *Attention * gradientList;
+    //return DOT6(TriOffset3, Hash6(squreInputI + bit1 + bit2));
+    return mul(mul(float1x2(1, 1), n), float4x1(50,50,50, 50))._11;
+}
+
+inline float OctaveSimplexNoise6(float2x3 Input)
+{
+    float v = 0.5 * SimplexNoise6(Input);
+    v += 0.25 * SimplexNoise6(Input * 2); v += 0.125 * SimplexNoise6(Input * 4); v += 0.0625 * SimplexNoise6(Input * 8);
+    v += 0.03725 * SimplexNoise6(Input * 16);
+    return v;
+}
 inline float Perlin2(float2 Input)
 {
     float2 fp = floor(Input);
@@ -229,18 +320,33 @@ inline float SeamlessSimplex2(float2 Input, float2 De)
     value = 0.5 + 0.5 * value;
     return value;
 }
+inline float SeamlessSimplex3(float3 Input, float3 De)
+{
+    float nx =0.71+ cos(Input.x * 2 * PI) * De.x / (2 * PI);
+    float ny =0.71+ cos(Input.y * 2 * PI) * De.y / (2 * PI);
+    float nz =0.71+ cos(Input.z * 2 * PI) * De.z / (2 * PI);
+    float nw =0.71+ sin(Input.x * 2 * PI) * De.x / (2 * PI);
+    float ne =0.71+ sin(Input.y * 2 * PI) * De.y / (2 * PI);
+    float nf =0.71+ sin(Input.z * 2 * PI) * De.z / (2 * PI);
+    
+    float value = OctaveSimplexNoise6(float2x3(nz, nf, 0, 0, Input.x, Input.y));
+    value = 0.5 + 0.5 * value;
+    return value;
+}
+
 float4 RWSize;
 RWTexture2D<float4> CoverMap;
 [numthreads(32, 32, 1)]
 void GenerateCoverNoise(uint3 id : SV_DispatchThreadID)
 {
-    CoverMap[id.xy] = SeamlessSimplex2(id.xy * 1.0 / RWSize.xy, float2(8.0, 8.0));
+    float v =SeamlessSimplex3(float3(id.xy * 8.0 / RWSize.xy, 0.2), float3(2.0, 2.0, 2.0));
+    CoverMap[id.xy] = v;
 }
 RWTexture2D<float4> DetailMap;
 [numthreads(32, 32, 1)]
 void GenerateDetailNoise(uint3 id : SV_DispatchThreadID)
 {
-    DetailMap[id.xy] = SeamlessPerlin2(id.xy / RWSize.xy, float2(10, 10));
+    DetailMap[id.xy] = SeamlessSimplex2(id.xy * 2.0 / RWSize.xy, float2(8.0, 8.0));
 }
 RWTexture3D<float4> VolumeMap;
 [numthreads(32, 32, 1)]
